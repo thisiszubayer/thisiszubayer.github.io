@@ -1,4 +1,4 @@
-thisiszubayer@gmail.com<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -15,9 +15,10 @@ thisiszubayer@gmail.com<!doctype html>
 
     <!-- 
         ================================================================================
-        CLIPBOARD INJECTION SCRIPT & UI (AGGRESSIVE MUTATION FIX)
-        This script actively waits for the email link, then removes the 'href' 
-        to prevent 'mailto' and attaches the copy handler.
+        CLIPBOARD INJECTION SCRIPT & UI (SECURE, AUTO-DETECT FIX)
+        This script securely waits for the email link, extracts the address from 
+        its 'mailto:href' (without hardcoding the address in the script itself), 
+        removes the 'href', and attaches the copy handler.
         ================================================================================ 
     -->
 
@@ -56,13 +57,12 @@ thisiszubayer@gmail.com<!doctype html>
         </div>
     </div>
 
-    <!-- 2. Pure JavaScript Logic (using MutationObserver and DOM Surgery) -->
+    <!-- 2. Pure JavaScript Logic (using MutationObserver and Secure Extraction) -->
     <script>
         // --- CONFIGURATION ---
-        const EMAIL_ADDRESS = 'thisiszubayer@gmail.com';
         const NOTIFICATION_DURATION = 3000; // 3 seconds
         let handlerAttached = false;
-        let observerInstance = null; // Store observer instance
+        let observerInstance = null; 
 
         // --- NOTIFICATION HANDLER ---
         function showNotification(message) {
@@ -79,18 +79,22 @@ thisiszubayer@gmail.com<!doctype html>
             }, NOTIFICATION_DURATION);
         }
 
-        // --- CORE COPY FUNCTION ---
-        function copyEmailToClipboard(event) {
-            // Prevent the default mailto: action (which should now be disabled anyway)
+        // --- CORE COPY FUNCTION (Accepts email as argument, not from global) ---
+        function copyEmailToClipboard(event, emailAddress) {
             if (event) {
                 event.preventDefault();
             }
             
+            if (!emailAddress) {
+                showNotification('Copy failed: Email not found.');
+                return;
+            }
+
             let success = false;
             try {
-                // Use the standard execCommand copy method for maximum compatibility in this environment
+                // Use the standard execCommand copy method
                 const tempElement = document.createElement('textarea');
-                tempElement.value = EMAIL_ADDRESS;
+                tempElement.value = emailAddress;
                 // Position off-screen
                 tempElement.style.position = 'fixed'; 
                 tempElement.style.top = '0';
@@ -107,53 +111,57 @@ thisiszubayer@gmail.com<!doctype html>
             }
 
             if (success) {
-                showNotification(`${EMAIL_ADDRESS} copied! 📋`);
+                // Show only the first few chars of the email for security in the notification
+                const displayEmail = emailAddress.split('@')[0];
+                showNotification(`${displayEmail}... copied! 📋`);
             } else {
                 showNotification('Copy failed. Please copy the email manually.');
             }
         }
 
-        // --- ATTACH HANDLER LOGIC (Performs the aggressive DOM modification) ---
+        // --- ATTACH HANDLER LOGIC (Finds mailto link, extracts address, modifies DOM) ---
         function attachClipboardHandler() {
             if (handlerAttached) return null;
 
-            let emailLink = null;
-
-            // Search all links for the email address in their text content or href
-            const allLinks = document.querySelectorAll('a');
-            for (const link of allLinks) {
-                if (link.textContent.includes(EMAIL_ADDRESS) || link.getAttribute('href')?.includes(`mailto:${EMAIL_ADDRESS}`)) {
-                    emailLink = link;
-                    break;
-                }
-            }
+            // Securely find the mailto link using a standard selector
+            const emailLink = document.querySelector('a[href^="mailto:"]');
 
             if (emailLink) {
-                // AGGRESSIVE FIX: Remove the href to stop mailto, and attach the handler
-                emailLink.removeAttribute('href');
-                emailLink.style.cursor = 'pointer'; // Make sure the cursor still looks clickable
-                
-                // Attach the handler
-                emailLink.addEventListener('click', copyEmailToClipboard);
-                handlerAttached = true;
-                
-                // If we found and modified the link, disconnect the observer
-                if (observerInstance) {
-                    observerInstance.disconnect();
-                    console.log('Copy-to-Clipboard: MutationObserver disconnected after successful attachment.');
+                const fullHref = emailLink.getAttribute('href');
+                let emailAddress = null;
+
+                if (fullHref) {
+                    // Extract the email address (e.g., from "mailto:email@example.com")
+                    // This is the crucial step that avoids hardcoding the email address
+                    emailAddress = fullHref.replace(/^mailto:/i, '');
                 }
-                
-                console.log(`Copy-to-Clipboard: Handler successfully attached via aggressive DOM modification.`);
-                return emailLink;
+
+                if (emailAddress && emailAddress.includes('@')) {
+                    // AGGRESSIVE FIX: Remove the href to stop mailto
+                    emailLink.removeAttribute('href');
+                    emailLink.style.cursor = 'pointer'; // Keep it looking clickable
+                    
+                    // Attach the handler using a closure to pass the extracted email address
+                    emailLink.addEventListener('click', (e) => copyEmailToClipboard(e, emailAddress));
+                    handlerAttached = true;
+                    
+                    if (observerInstance) {
+                        observerInstance.disconnect();
+                        console.log('Copy-to-Clipboard: MutationObserver disconnected after successful attachment.');
+                    }
+                    
+                    console.log(`Copy-to-Clipboard: Handler successfully attached via secure DOM modification.`);
+                    return emailLink;
+                }
             }
             return null;
         }
 
         // --- INITIALIZATION ---
         window.addEventListener('load', () => {
-            // 1. Check immediately upon load, in case React is fast
+            // 1. Check immediately upon load
             if (attachClipboardHandler()) {
-                return; // Handler attached, we're done.
+                return; 
             }
 
             // 2. If not found, start observing the root element for changes
@@ -165,11 +173,10 @@ thisiszubayer@gmail.com<!doctype html>
 
             // Callback function to execute when mutations are observed
             const observerCallback = (mutationsList, observer) => {
-                // Check for the link on every significant change (subtree modification)
-                const foundLink = attachClipboardHandler();
+                attachClipboardHandler();
             };
 
-            // Create an observer instance linked to the callback function
+            // Create and store observer instance
             observerInstance = new MutationObserver(observerCallback);
 
             // Start observing the target node for configured mutations
