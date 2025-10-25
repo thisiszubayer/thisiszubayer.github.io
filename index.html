@@ -20,10 +20,9 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD NOTIFICATION UI (V7: CUSTOM SVG ICON ADDED)
-        - Icon: Custom Green Circle with Tick SVG added.
-        - Text Size: text-lg.
-        - Duration: 5000ms.
+        CLIPBOARD NOTIFICATION UI (V8: REDUCED WIDTH, LARGER/BOLDER ICON)
+        - Padding: Adjusted to px-4 to reduce width.
+        - Icon Size: Increased to w-8 h-8 and lines thickened for clarity.
         ================================================================================ 
     -->
 
@@ -46,14 +45,17 @@
             transition: all 0.4s ease-out;
         "
     >
-        <!-- Inner content now uses py-4 px-6, text-lg, and flex layout for the icon and text -->
-        <div class="flex items-center gap-3 py-4 px-6 bg-white text-black rounded-lg border border-gray-300">
-            <!-- New custom SVG icon (Green circle with white tick) -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-6 h-6">
-                <!-- Green Circle (#10B981 is Tailwind's default green-500) -->
-                <circle cx="12" cy="12" r="10" fill="#10B981" stroke="none"/>
-                <!-- White Tick -->
-                <path d="M9 12l2 2l4-4" stroke="#FFFFFF" stroke-width="2.5" fill="none"/>
+        <!-- PADDING UPDATED TO PX-4 TO REDUCE WIDTH -->
+        <div class="flex items-center gap-3 py-4 px-4 bg-white text-black rounded-lg border border-gray-300">
+            <!-- 
+                UPDATED SVG: w-8 h-8 container size. 
+                Circle radius increased and tick stroke width increased for better visibility.
+            -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-8 h-8">
+                <!-- Green Circle -->
+                <circle cx="12" cy="12" r="11" fill="#10B981" stroke="none"/>
+                <!-- White Tick - Thicker stroke-width="3" -->
+                <path d="M9 12l2 2l4-4" stroke="#FFFFFF" stroke-width="3" fill="none"/>
             </svg>
 
             <!-- Text size is text-lg -->
@@ -124,7 +126,6 @@
                 document.body.removeChild(tempElement);
                 
                 // Success message
-                // UPDATED: Removed the ✔️ emoji as the SVG icon now handles the success visual
                 showNotification(`Email address copied successfully!`);
 
             } catch (err) {
