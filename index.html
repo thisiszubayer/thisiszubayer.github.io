@@ -1,4 +1,4 @@
-<!doctype html>
+thisiszubayer@gmail.com<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -15,9 +15,9 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD INJECTION SCRIPT & UI (MutationObserver FIX)
-        This block uses a MutationObserver to actively wait for the React component 
-        to create the email link before attaching the click handler.
+        CLIPBOARD INJECTION SCRIPT & UI (AGGRESSIVE MUTATION FIX)
+        This script actively waits for the email link, then removes the 'href' 
+        to prevent 'mailto' and attaches the copy handler.
         ================================================================================ 
     -->
 
@@ -56,13 +56,13 @@
         </div>
     </div>
 
-    <!-- 2. Pure JavaScript Logic (using MutationObserver) -->
+    <!-- 2. Pure JavaScript Logic (using MutationObserver and DOM Surgery) -->
     <script>
         // --- CONFIGURATION ---
         const EMAIL_ADDRESS = 'thisiszubayer@gmail.com';
-        const MAILTO_HREF = `mailto:${EMAIL_ADDRESS}`;
         const NOTIFICATION_DURATION = 3000; // 3 seconds
         let handlerAttached = false;
+        let observerInstance = null; // Store observer instance
 
         // --- NOTIFICATION HANDLER ---
         function showNotification(message) {
@@ -81,15 +81,17 @@
 
         // --- CORE COPY FUNCTION ---
         function copyEmailToClipboard(event) {
-            // Prevent the default mailto: action
+            // Prevent the default mailto: action (which should now be disabled anyway)
             if (event) {
                 event.preventDefault();
             }
             
             let success = false;
             try {
+                // Use the standard execCommand copy method for maximum compatibility in this environment
                 const tempElement = document.createElement('textarea');
                 tempElement.value = EMAIL_ADDRESS;
+                // Position off-screen
                 tempElement.style.position = 'fixed'; 
                 tempElement.style.top = '0';
                 tempElement.style.left = '-9999px';
@@ -111,31 +113,37 @@
             }
         }
 
-        // --- ATTACH HANDLER LOGIC ---
+        // --- ATTACH HANDLER LOGIC (Performs the aggressive DOM modification) ---
         function attachClipboardHandler() {
             if (handlerAttached) return null;
 
             let emailLink = null;
 
-            // Attempt 1: Check for the exact mailto href
-            emailLink = document.querySelector(`a[href="${MAILTO_HREF}"]`);
-
-            if (!emailLink) {
-                // Attempt 2: Search all links for the email address in their text content
-                const allLinks = document.querySelectorAll('a');
-                for (const link of allLinks) {
-                    if (link.textContent.includes(EMAIL_ADDRESS)) {
-                        emailLink = link;
-                        break;
-                    }
+            // Search all links for the email address in their text content or href
+            const allLinks = document.querySelectorAll('a');
+            for (const link of allLinks) {
+                if (link.textContent.includes(EMAIL_ADDRESS) || link.getAttribute('href')?.includes(`mailto:${EMAIL_ADDRESS}`)) {
+                    emailLink = link;
+                    break;
                 }
             }
 
             if (emailLink) {
-                // Attach the handler ONLY if not already attached
-                emailLink.addEventListener('click', copyEmailToClipboard, { once: true });
+                // AGGRESSIVE FIX: Remove the href to stop mailto, and attach the handler
+                emailLink.removeAttribute('href');
+                emailLink.style.cursor = 'pointer'; // Make sure the cursor still looks clickable
+                
+                // Attach the handler
+                emailLink.addEventListener('click', copyEmailToClipboard);
                 handlerAttached = true;
-                console.log(`Copy-to-Clipboard: Handler successfully attached via MutationObserver.`);
+                
+                // If we found and modified the link, disconnect the observer
+                if (observerInstance) {
+                    observerInstance.disconnect();
+                    console.log('Copy-to-Clipboard: MutationObserver disconnected after successful attachment.');
+                }
+                
+                console.log(`Copy-to-Clipboard: Handler successfully attached via aggressive DOM modification.`);
                 return emailLink;
             }
             return null;
@@ -157,22 +165,16 @@
 
             // Callback function to execute when mutations are observed
             const observerCallback = (mutationsList, observer) => {
-                // We check for the link on every significant change (subtree modification)
+                // Check for the link on every significant change (subtree modification)
                 const foundLink = attachClipboardHandler();
-                
-                if (foundLink) {
-                    // Once the link is found and the handler is attached, stop observing
-                    observer.disconnect();
-                    console.log('Copy-to-Clipboard: MutationObserver disconnected.');
-                }
             };
 
             // Create an observer instance linked to the callback function
-            const observer = new MutationObserver(observerCallback);
+            observerInstance = new MutationObserver(observerCallback);
 
             // Start observing the target node for configured mutations
             const config = { childList: true, subtree: true };
-            observer.observe(root, config);
+            observerInstance.observe(root, config);
         });
     </script>
   </body>
