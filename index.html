@@ -15,34 +15,18 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD INJECTION SCRIPT & UI (FINAL ATTEMPT: Z-INDEX and RAF FIX)
-        1. Set ultra-high z-index for guaranteed foreground display.
-        2. Use requestAnimationFrame to force the CSS visibility class to apply correctly.
+        CLIPBOARD INJECTION SCRIPT & UI (FINAL, BULLETPROOF FIX)
+        - Removed CSS classes and reliance on them.
+        - Used inline styles for initial state and direct style manipulation in JS.
+        - High z-index is maintained.
         ================================================================================ 
     -->
-
-    <!-- 1. Notification UI Styles and HTML -->
-    <style>
-        /* Custom CSS for the slide-in/slide-out animation */
-        #copy-notification {
-            /* Initial state: hidden and slightly off-screen */
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-20px);
-            transition: all 0.4s ease-out; 
-        }
-        .notification-active {
-            /* Active state: visible and in place */
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateY(0) !important;
-        }
-    </style>
 
     <div 
         id="copy-notification"
         class="fixed top-5 right-5 z-[99999] rounded-lg shadow-xl" 
         aria-live="assertive"
+        style="opacity: 0; visibility: hidden; transform: translateY(-20px); transition: all 0.4s ease-out;"
     >
         <!-- Notification content uses your Tailwind styling -->
         <div class="flex items-center gap-3 p-3 bg-green-600 text-white rounded-lg">
@@ -62,8 +46,9 @@
         const NOTIFICATION_DURATION = 3000; // 3 seconds
         let handlerAttached = false;
         let observerInstance = null; 
+        const TRANSITION_DURATION_MS = 400; // Matches the 0.4s transition set inline
 
-        // --- NOTIFICATION HANDLER (REFINED) ---
+        // --- NOTIFICATION HANDLER (FINAL: Direct Style Manipulation) ---
         function showNotification(message) {
             const container = document.getElementById('copy-notification');
             const messageSpan = document.getElementById('notification-message');
@@ -72,16 +57,24 @@
 
             messageSpan.textContent = message;
 
-            // FIX: Use requestAnimationFrame to force the transition class to apply correctly,
-            // bypassing potential timing issues in the compiled environment.
+            // 1. Force visible state via direct style manipulation
+            // Use requestAnimationFrame to ensure the style change is applied on the next paint cycle
             requestAnimationFrame(() => {
-                container.classList.add('notification-active');
+                container.style.opacity = '1';
+                container.style.visibility = 'visible';
+                container.style.transform = 'translateY(0)';
             });
 
-
+            // 2. Set timeout to hide it
             setTimeout(() => {
-                container.classList.remove('notification-active');
-                // The element will then transition back to its default hidden state (opacity: 0, visibility: hidden)
+                container.style.opacity = '0';
+                container.style.transform = 'translateY(-20px)';
+                
+                // 3. Delay the visibility change until the opacity transition is finished 
+                setTimeout(() => {
+                     container.style.visibility = 'hidden';
+                }, TRANSITION_DURATION_MS); 
+
             }, NOTIFICATION_DURATION);
         }
 
@@ -107,7 +100,6 @@
                 
                 // 2. Select and execute copy command
                 tempElement.select();
-                // We execute the command but ignore its return value, as it is unreliable here.
                 document.execCommand('copy'); 
                 
                 // 3. Cleanup
