@@ -124,8 +124,22 @@
         // --- INITIALIZATION ---
         // Wait for the window load event to ensure all React elements are in the DOM
         window.addEventListener('load', () => {
-            // Target the <a> element using its specific href attribute
-            const emailLink = document.querySelector(`a[href="mailto:${EMAIL_ADDRESS}"]`);
+            let emailLink = null;
+
+            // Attempt 1: Target the <a> element using its specific href attribute (standard method)
+            emailLink = document.querySelector(`a[href="mailto:${EMAIL_ADDRESS}"]`);
+
+            if (!emailLink) {
+                // Attempt 2: Search all links for the email address in their content (more robust)
+                const allLinks = document.querySelectorAll('a');
+                for (const link of allLinks) {
+                    if (link.textContent.includes(EMAIL_ADDRESS)) {
+                        emailLink = link;
+                        console.log('Copy-to-Clipboard: Found link by content search.');
+                        break;
+                    }
+                }
+            }
 
             if (emailLink) {
                 // Overwrite the default click behavior with our copy function
