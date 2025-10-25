@@ -15,9 +15,10 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD INJECTION SCRIPT & UI (FIXED NOTIFICATION)
-        This script now correctly uses the return value of document.execCommand('copy') 
-        to trigger the success notification.
+        CLIPBOARD INJECTION SCRIPT & UI (FIXED NOTIFICATION LOGIC)
+        The notification is now triggered immediately inside the 'try' block, 
+        assuming success since the copy is known to work, bypassing the unreliable 
+        boolean return value of execCommand('copy').
         ================================================================================ 
     -->
 
@@ -89,32 +90,28 @@
                 return;
             }
 
-            let success = false;
             try {
-                // Use the standard execCommand copy method
+                // 1. Create temporary element
                 const tempElement = document.createElement('textarea');
                 tempElement.value = emailAddress;
-                // Position off-screen
                 tempElement.style.position = 'fixed'; 
                 tempElement.style.top = '0';
                 tempElement.style.left = '-9999px';
                 document.body.appendChild(tempElement);
                 
+                // 2. Select and execute copy command
                 tempElement.select();
+                document.execCommand('copy'); 
                 
-                // CRITICAL FIX: Capture the actual boolean result of the copy command
-                success = document.execCommand('copy'); 
-                
+                // 3. Cleanup
                 document.body.removeChild(tempElement);
+                
+                // 4. FIX: If we reached this point without an exception, trigger success.
+                showNotification(`Email Address Copied! 📧`);
+
             } catch (err) {
                 console.error('Copy to clipboard failed:', err);
-                success = false;
-            }
-
-            if (success) {
-                showNotification(`Email address is copied successfully! 📧`);
-            } else {
-                showNotification('Please copy the Email address: thisiszubayer@gmail.com');
+                showNotification('Copy failed. Please copy the email manually.');
             }
         }
 
@@ -123,7 +120,6 @@
             if (handlerAttached) return null;
 
             // Securely find the mailto link using a standard selector
-            // We search for the link that the React component dynamically renders.
             const emailLink = document.querySelector('a[href^="mailto:"]');
 
             if (emailLink) {
@@ -136,9 +132,9 @@
                 }
 
                 if (emailAddress && emailAddress.includes('@')) {
-                    // AGGRESSIVE FIX: Remove the href to stop mailto
+                    // Remove the href to stop mailto
                     emailLink.removeAttribute('href');
-                    emailLink.style.cursor = 'pointer'; // Keep it looking clickable
+                    emailLink.style.cursor = 'pointer'; 
                     
                     // Attach the handler using a closure to pass the extracted email address
                     emailLink.addEventListener('click', (e) => copyEmailToClipboard(e, emailAddress));
@@ -146,10 +142,8 @@
                     
                     if (observerInstance) {
                         observerInstance.disconnect();
-                        // console.log('Copy-to-Clipboard: MutationObserver disconnected after successful attachment.');
                     }
                     
-                    // console.log(`Copy-to-Clipboard: Handler successfully attached via secure DOM modification.`);
                     return emailLink;
                 }
             }
