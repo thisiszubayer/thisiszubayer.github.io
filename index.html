@@ -11,33 +11,80 @@
   </head>
   <body>
     <div id="root"></div>
-    <style>
-    /* Custom CSS for the slide-in/slide-out animation */
-    #copy-notification {
-        /* Initial state: hidden and slightly off-screen */
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-20px);
-        transition: all 0.4s ease-out; 
-    }
-    .notification-active {
-        /* Active state: visible and in place */
-        opacity: 1 !important;
-        visibility: visible !important;
-        transform: translateY(0) !important;
-    }
-</style>
+    <!--================================================================================CLIPBOARD INJECTION SCRIPT & UI (MUST BE PLACED JUST BEFORE THE CLOSING </body> TAG)This block adds the Copy-to-Clipboard functionality for the email address 'thisiszubayer@gmail.com'.It includes its own styles and logic to ensure it runs correctly over the React component.================================================================================--><!-- 1. Notification UI Styles and HTML --><style>/* Custom CSS for the slide-in/slide-out animation /#copy-notification {/ Initial state: hidden and slightly off-screen /opacity: 0;visibility: hidden;transform: translateY(-20px);transition: all 0.4s ease-out;}.notification-active {/ Active state: visible and in place */opacity: 1 !important;visibility: visible !important;transform: translateY(0) !important;}</style><divid="copy-notification"class="fixed top-5 right-5 z-[1000] rounded-lg shadow-xl"aria-live="assertive"><!-- Notification content uses your Tailwind styling --><div class="flex items-center gap-3 p-3 bg-green-600 text-white rounded-lg"><!-- Success Icon (Clipboard Check SVG) --><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M15 2H9a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"></path><polyline points="9 14 12 17 15 14"></polyline></svg><span id="notification-message" class="font-medium text-sm"></span></div></div><!-- 2. Pure JavaScript Logic --><script>// --- CONFIGURATION ---const EMAIL_ADDRESS = 'thisiszubayer@gmail.com';const NOTIFICATION_DURATION = 3000; // 3 seconds// --- NOTIFICATION HANDLER ---
+function showNotification(message) {
+    const container = document.getElementById(&#39;copy-notification&#39;);
+    const messageSpan = document.getElementById(&#39;notification-message&#39;);
 
-<div id="copy-notification" class="fixed top-5 right-5 z-[1000] rounded-lg shadow-xl" aria-live="assertive">
-    <!-- Notification content uses your Tailwind styling -->
-    <div class="flex items-center gap-3 p-3 bg-green-600 text-white rounded-lg">
-        <!-- Success Icon (Clipboard Check SVG) -->
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/><path d="m18 15-2-2-2 2"/>
-        </svg>
-        <span id="notification-message" class="font-medium text-sm"></span>
-    </div>
-</div>
+    if (!container || !messageSpan) {
+        console.error(&quot;Copy-to-Clipboard: Notification UI elements not found.&quot;);
+        return;
+    }
 
+    messageSpan.textContent = message;
+    
+    // 1. Show notification
+    container.classList.add(&#39;notification-active&#39;);
+
+    // 2. Hide after duration
+    setTimeout(() =&gt; {
+        container.classList.remove(&#39;notification-active&#39;);
+    }, NOTIFICATION_DURATION);
+}
+
+// --- CORE COPY FUNCTION ---
+function copyEmailToClipboard(event) {
+    // Prevent the default action (opening the mailto link)
+    if (event) {
+        event.preventDefault();
+    }
+    
+    let success = false;
+    try {
+        // Create a temporary, hidden textarea element
+        const tempElement = document.createElement(&#39;textarea&#39;);
+        tempElement.value = EMAIL_ADDRESS;
+        
+        // Set styles to make it invisible and off-screen
+        tempElement.style.position = &#39;fixed&#39;; 
+        tempElement.style.top = &#39;0&#39;;
+        tempElement.style.left = &#39;-9999px&#39;;
+        document.body.appendChild(tempElement);
+        
+        // Select and copy the text
+        tempElement.select();
+        
+        // Use execCommand(&#39;copy&#39;) for reliable cross-browser/iFrame copying
+        document.execCommand(&#39;copy&#39;); 
+        
+        document.body.removeChild(tempElement);
+        success = true;
+    } catch (err) {
+        console.error(&#39;Copy to clipboard failed:&#39;, err);
+    }
+
+    if (success) {
+        showNotification(`${EMAIL_ADDRESS} copied! 📋`);
+    } else {
+        // Fallback
+        showNotification(&#39;Copy failed. Please copy the email manually.&#39;);
+    }
+}
+
+// --- INITIALIZATION ---
+// Wait for the window load event to ensure all React elements are in the DOM
+window.addEventListener(&#39;load&#39;, () =&gt; {
+    // Target the &lt;a&gt; element using its specific href attribute
+    const emailLink = document.querySelector(`a[href=&quot;mailto:${EMAIL_ADDRESS}&quot;]`);
+
+    if (emailLink) {
+        // Overwrite the default click behavior with our copy function
+        emailLink.addEventListener(&#39;click&#39;, copyEmailToClipboard);
+        console.log(`Copy-to-Clipboard: Function attached to email link (${EMAIL_ADDRESS}).`);
+    } else {
+        console.warn(&#39;Copy-to-Clipboard: Could not find the target email link element.&#39;);
+    }
+});
+</script>
   </body>
 </html>
