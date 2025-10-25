@@ -20,9 +20,9 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD NOTIFICATION UI (V9: NEW, HIGH-FIDELITY, EMBEDDED SVG)
-        - Padding: px-4 (reduced width).
-        - Icon: Replaced with a sharp, standard checkmark-in-circle SVG.
+        CLIPBOARD NOTIFICATION UI (V10: RESTORED ORIGINAL SIMPLE SVG, KEPT SIZE/WIDTH)
+        - Width: Maintained reduction to px-4.
+        - Icon: Restored to simple circle+path, maintained w-8 h-8 size and thick stroke.
         ================================================================================ 
     -->
 
@@ -48,15 +48,15 @@
         <!-- PADDING REMAINS PX-4 -->
         <div class="flex items-center gap-3 py-4 px-4 bg-white text-black rounded-lg border border-gray-300">
             <!-- 
-                UPDATED SVG: High-fidelity, self-contained checkmark icon.
-                - w-8 h-8 container size. 
-                - #10B981 is Tailwind green-600 (a strong green).
+                RESTORED SVG: Simple circle and path. 
+                - Container size is w-8 h-8.
+                - Tick stroke-width="3" for clarity.
             -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" class="w-8 h-8">
-                <!-- Outer Circle (Green Fill) -->
-                <path d="M22 11.08V12c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2c1.45 0 2.82.32 4.04.88L15 4.39A8.003 8.003 0 0 0 12 4c-4.41 0-8 3.59-8 8s3.59 8 8 8 8-3.59 8-8v-.92h2z" fill="#10B981"/>
-                <!-- Checkmark Path (White Fill) -->
-                <path d="M16 4.39l-6.59 6.59-1.41-1.41-1.41 1.41 2.83 2.83 7-7z" fill="#FFFFFF"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-8 h-8">
+                <!-- Green Circle -->
+                <circle cx="12" cy="12" r="11" fill="#10B981" stroke="none"/>
+                <!-- White Tick - Thicker stroke-width="3" -->
+                <path d="M9 12l2 2l4-4" stroke="#FFFFFF" stroke-width="3" fill="none"/>
             </svg>
 
             <!-- Text size is text-lg -->
