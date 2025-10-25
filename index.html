@@ -15,10 +15,9 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD INJECTION SCRIPT & UI (SECURE, AUTO-DETECT FIX)
-        This script securely waits for the email link, extracts the address from 
-        its 'mailto:href' (without hardcoding the address in the script itself), 
-        removes the 'href', and attaches the copy handler.
+        CLIPBOARD INJECTION SCRIPT & UI (FIXED NOTIFICATION)
+        This script now correctly uses the return value of document.execCommand('copy') 
+        to trigger the success notification.
         ================================================================================ 
     -->
 
@@ -102,20 +101,20 @@
                 document.body.appendChild(tempElement);
                 
                 tempElement.select();
-                document.execCommand('copy'); 
+                
+                // CRITICAL FIX: Capture the actual boolean result of the copy command
+                success = document.execCommand('copy'); 
                 
                 document.body.removeChild(tempElement);
-                success = true;
             } catch (err) {
                 console.error('Copy to clipboard failed:', err);
+                success = false;
             }
 
             if (success) {
-                // Show only the first few chars of the email for security in the notification
-                const displayEmail = emailAddress.split('@')[0];
-                showNotification(`${displayEmail}... copied! 📋`);
+                showNotification(`Email address is copied successfully! 📧`);
             } else {
-                showNotification('Copy failed. Please copy the email manually.');
+                showNotification('Please copy the Email address: thisiszubayer@gmail.com');
             }
         }
 
@@ -124,6 +123,7 @@
             if (handlerAttached) return null;
 
             // Securely find the mailto link using a standard selector
+            // We search for the link that the React component dynamically renders.
             const emailLink = document.querySelector('a[href^="mailto:"]');
 
             if (emailLink) {
@@ -132,7 +132,6 @@
 
                 if (fullHref) {
                     // Extract the email address (e.g., from "mailto:email@example.com")
-                    // This is the crucial step that avoids hardcoding the email address
                     emailAddress = fullHref.replace(/^mailto:/i, '');
                 }
 
@@ -147,10 +146,10 @@
                     
                     if (observerInstance) {
                         observerInstance.disconnect();
-                        console.log('Copy-to-Clipboard: MutationObserver disconnected after successful attachment.');
+                        // console.log('Copy-to-Clipboard: MutationObserver disconnected after successful attachment.');
                     }
                     
-                    console.log(`Copy-to-Clipboard: Handler successfully attached via secure DOM modification.`);
+                    // console.log(`Copy-to-Clipboard: Handler successfully attached via secure DOM modification.`);
                     return emailLink;
                 }
             }
