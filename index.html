@@ -16,10 +16,11 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD NOTIFICATION UI (FINAL, STABLE VERSION)
-        - Position: Bottom-Left (fixed via raw inline CSS for maximum isolation).
-        - Theme: White background, Black text.
-        - Messages: Uses custom success/error text.
+        CLIPBOARD NOTIFICATION UI (V6: NO ICON, LARGER TEXT, BALANCED PADDING)
+        - Position: Bottom-Left.
+        - Text Size: Increased to text-lg.
+        - Icon: Removed.
+        - Duration: 5000ms.
         ================================================================================ 
     -->
 
@@ -42,22 +43,19 @@
             transition: all 0.4s ease-out;
         "
     >
-        <!-- Inner content uses white background and black text -->
-        <div class="flex items-center gap-3 p-3 bg-white text-black rounded-lg border border-gray-300">
-            <!-- Success Icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
-                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                <path d="M15 2H9a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"></path>
-                <polyline points="9 14 12 17 15 14"></polyline>
-            </svg>
-            <span id="notification-message" class="font-medium text-sm"></span>
+        <!-- Inner content now uses py-4 px-6 for balanced padding and centers the text -->
+        <div class="text-center py-4 px-6 bg-white text-black rounded-lg border border-gray-300">
+            <!-- The SVG Icon has been removed as requested -->
+            
+            <!-- Text size is increased to text-lg -->
+            <span id="notification-message" class="font-medium text-lg"></span>
         </div>
     </div>
 
     <!-- 2. Pure JavaScript Logic -->
     <script>
         // --- CONFIGURATION ---
-        const NOTIFICATION_DURATION = 3000; 
+        const NOTIFICATION_DURATION = 5000; // Display time: 5000ms
         let handlerAttached = false;
         let observerInstance = null; 
         const TRANSITION_DURATION_MS = 400; 
@@ -93,20 +91,19 @@
             }, NOTIFICATION_DURATION);
         }
 
-        // --- CORE COPY FUNCTION (Logic updated for messaging) ---
+        // --- CORE COPY FUNCTION ---
         function copyEmailToClipboard(event, emailAddress) {
             if (event) {
                 event.preventDefault();
             }
             
-            // Fallback for extreme cases where emailAddress is missing
             if (!emailAddress) {
                 showNotification(`Copy failed. Email: ${FALLBACK_EMAIL}`);
                 return;
             }
 
             try {
-                // Clipboard access via execCommand (known to work in this environment)
+                // Clipboard access via execCommand (works in this environment)
                 const tempElement = document.createElement('textarea');
                 tempElement.value = emailAddress;
                 tempElement.style.position = 'fixed'; 
@@ -117,21 +114,20 @@
                 document.execCommand('copy'); 
                 document.body.removeChild(tempElement);
                 
-                // Success message updated
+                // Success message
                 showNotification(`Email address copied successfully! ✔️`);
 
             } catch (err) {
-                // Error message updated to show email address
+                // Error message
                 console.error('Copy to clipboard failed:', err);
                 showNotification(`Copy failed. Email: ${FALLBACK_EMAIL}`);
             }
         }
 
-        // --- ATTACH HANDLER LOGIC (MutationObserver ensures link exists before attaching) ---
+        // --- ATTACH HANDLER LOGIC ---
         function attachClipboardHandler() {
             if (handlerAttached) return null;
 
-            // Find the link that uses the mailto: protocol
             const emailLink = document.querySelector('a[href^="mailto:"]');
 
             if (emailLink) {
@@ -139,21 +135,18 @@
                 let emailAddress = null;
 
                 if (fullHref) {
-                    // Extract only the email address
                     emailAddress = fullHref.replace(/^mailto:/i, '');
                 }
 
                 if (emailAddress && emailAddress.includes('@')) {
-                    // Disable the default mailto behavior and change cursor
                     emailLink.removeAttribute('href');
                     emailLink.style.cursor = 'pointer'; 
                     
-                    // Attach the copy function
                     emailLink.addEventListener('click', (e) => copyEmailToClipboard(e, emailAddress));
                     handlerAttached = true;
                     
                     if (observerInstance) {
-                        observerInstance.disconnect(); // Stop observing once found
+                        observerInstance.disconnect(); 
                     }
                     
                     return emailLink;
@@ -164,12 +157,10 @@
 
         // --- INITIALIZATION ---
         window.addEventListener('load', () => {
-            // 1. Try attaching immediately
             if (attachClipboardHandler()) {
                 return; 
             }
 
-            // 2. If not found, start MutationObserver on the root
             const root = document.getElementById('root');
             if (!root) {
                 return;
