@@ -20,9 +20,8 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD NOTIFICATION UI (V10: RESTORED ORIGINAL SIMPLE SVG, KEPT SIZE/WIDTH)
-        - Width: Maintained reduction to px-4.
-        - Icon: Restored to simple circle+path, maintained w-8 h-8 size and thick stroke.
+        CLIPBOARD NOTIFICATION UI (V11: TICK PATH ENLARGED)
+        - The path d="M7 12.5 L10.5 15 L17 9.5" is significantly larger and stretches further.
         ================================================================================ 
     -->
 
@@ -48,15 +47,15 @@
         <!-- PADDING REMAINS PX-4 -->
         <div class="flex items-center gap-3 py-4 px-4 bg-white text-black rounded-lg border border-gray-300">
             <!-- 
-                RESTORED SVG: Simple circle and path. 
+                ENLARGED SVG TICK: Simple circle and path, but with expanded coordinates. 
                 - Container size is w-8 h-8.
                 - Tick stroke-width="3" for clarity.
             -->
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-8 h-8">
                 <!-- Green Circle -->
                 <circle cx="12" cy="12" r="11" fill="#10B981" stroke="none"/>
-                <!-- White Tick - Thicker stroke-width="3" -->
-                <path d="M9 12l2 2l4-4" stroke="#FFFFFF" stroke-width="3" fill="none"/>
+                <!-- White Tick - Thicker stroke-width="3", LARGER path coordinates -->
+                <path d="M7 12.5 L10.5 15 L17 9.5" stroke="#FFFFFF" stroke-width="3" fill="none"/>
             </svg>
 
             <!-- Text size is text-lg -->
