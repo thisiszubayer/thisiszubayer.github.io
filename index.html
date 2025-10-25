@@ -15,10 +15,9 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD INJECTION SCRIPT & UI (FIXED NOTIFICATION LOGIC)
-        The notification is now triggered immediately inside the 'try' block, 
-        assuming success since the copy is known to work, bypassing the unreliable 
-        boolean return value of execCommand('copy').
+        CLIPBOARD INJECTION SCRIPT & UI (FINAL ATTEMPT: Z-INDEX and RAF FIX)
+        1. Set ultra-high z-index for guaranteed foreground display.
+        2. Use requestAnimationFrame to force the CSS visibility class to apply correctly.
         ================================================================================ 
     -->
 
@@ -42,7 +41,7 @@
 
     <div 
         id="copy-notification"
-        class="fixed top-5 right-5 z-[1000] rounded-lg shadow-xl"
+        class="fixed top-5 right-5 z-[99999] rounded-lg shadow-xl" 
         aria-live="assertive"
     >
         <!-- Notification content uses your Tailwind styling -->
@@ -64,7 +63,7 @@
         let handlerAttached = false;
         let observerInstance = null; 
 
-        // --- NOTIFICATION HANDLER ---
+        // --- NOTIFICATION HANDLER (REFINED) ---
         function showNotification(message) {
             const container = document.getElementById('copy-notification');
             const messageSpan = document.getElementById('notification-message');
@@ -72,14 +71,21 @@
             if (!container || !messageSpan) return;
 
             messageSpan.textContent = message;
-            container.classList.add('notification-active');
+
+            // FIX: Use requestAnimationFrame to force the transition class to apply correctly,
+            // bypassing potential timing issues in the compiled environment.
+            requestAnimationFrame(() => {
+                container.classList.add('notification-active');
+            });
+
 
             setTimeout(() => {
                 container.classList.remove('notification-active');
+                // The element will then transition back to its default hidden state (opacity: 0, visibility: hidden)
             }, NOTIFICATION_DURATION);
         }
 
-        // --- CORE COPY FUNCTION (Accepts email as argument, not from global) ---
+        // --- CORE COPY FUNCTION (Logic assumes success since the copy is known to work) ---
         function copyEmailToClipboard(event, emailAddress) {
             if (event) {
                 event.preventDefault();
@@ -101,12 +107,13 @@
                 
                 // 2. Select and execute copy command
                 tempElement.select();
+                // We execute the command but ignore its return value, as it is unreliable here.
                 document.execCommand('copy'); 
                 
                 // 3. Cleanup
                 document.body.removeChild(tempElement);
                 
-                // 4. FIX: If we reached this point without an exception, trigger success.
+                // 4. Guaranteed Notification: If no exception was thrown, the copy succeeded.
                 showNotification(`Email Address Copied! 📧`);
 
             } catch (err) {
@@ -119,7 +126,7 @@
         function attachClipboardHandler() {
             if (handlerAttached) return null;
 
-            // Securely find the mailto link using a standard selector
+            // Find the mailto link 
             const emailLink = document.querySelector('a[href^="mailto:"]');
 
             if (emailLink) {
@@ -127,16 +134,15 @@
                 let emailAddress = null;
 
                 if (fullHref) {
-                    // Extract the email address (e.g., from "mailto:email@example.com")
                     emailAddress = fullHref.replace(/^mailto:/i, '');
                 }
 
                 if (emailAddress && emailAddress.includes('@')) {
-                    // Remove the href to stop mailto
+                    // Remove the href to stop mailto opening an email client
                     emailLink.removeAttribute('href');
                     emailLink.style.cursor = 'pointer'; 
                     
-                    // Attach the handler using a closure to pass the extracted email address
+                    // Attach the handler using a closure
                     emailLink.addEventListener('click', (e) => copyEmailToClipboard(e, emailAddress));
                     handlerAttached = true;
                     
