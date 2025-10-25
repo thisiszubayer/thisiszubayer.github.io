@@ -16,40 +16,53 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD INJECTION SCRIPT & UI (FINAL, STRUCTURAL FIX: ROOT INJECTION)
-        - Notification HTML is now injected directly into the #root element by JS.
-        - Uses inline styles for guaranteed display.
+        CLIPBOARD INJECTION SCRIPT & UI (FINAL, CSS ISOLATION FIX)
+        - Notification is placed OUTSIDE the #root.
+        - ALL Tailwind positioning classes have been removed and replaced with raw inline CSS.
+        - JS still controls visibility via direct inline style manipulation.
         ================================================================================ 
     -->
 
+    <div 
+        id="copy-notification"
+        aria-live="assertive"
+        style="
+            /* CRITICAL CSS: PURE STANDARD STYLES */
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            z-index: 99999; /* Absolute highest stacking context */
+            border-radius: 0.5rem; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+            /* TRANSITION AND INITIAL STATE */
+            opacity: 0; 
+            visibility: hidden; 
+            transform: translateY(-20px); 
+            transition: all 0.4s ease-out;
+        "
+    >
+        <!-- The inner content still uses non-conflicting Tailwind classes for color/padding -->
+        <div class="flex items-center gap-3 p-3 bg-green-600 text-white rounded-lg">
+            <!-- Success Icon (Clipboard Check SVG) -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <path d="M15 2H9a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"></path>
+                <polyline points="9 14 12 17 15 14"></polyline>
+            </svg>
+            <span id="notification-message" class="font-medium text-sm"></span>
+        </div>
+    </div>
+
+    <!-- 2. Pure JavaScript Logic (using MutationObserver and Secure Extraction) -->
     <script>
         // --- CONFIGURATION ---
         const NOTIFICATION_DURATION = 3000; // 3 seconds
         let handlerAttached = false;
         let observerInstance = null; 
-        const TRANSITION_DURATION_MS = 400; // Matches the 0.4s transition duration
+        const TRANSITION_DURATION_MS = 400; // Matches the 0.4s transition set inline
 
-        // --- NOTIFICATION HTML (Will be injected into #root) ---
-        const NOTIFICATION_HTML = `
-            <div 
-                id="copy-notification"
-                class="fixed top-5 right-5 z-[99999] rounded-lg shadow-xl" 
-                aria-live="assertive"
-                style="opacity: 0; visibility: hidden; transform: translateY(-20px); transition: all 0.4s ease-out;"
-            >
-                <div class="flex items-center gap-3 p-3 bg-green-600 text-white rounded-lg">
-                    <!-- Success Icon (Clipboard Check SVG) -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
-                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                        <path d="M15 2H9a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"></path>
-                        <polyline points="9 14 12 17 15 14"></polyline>
-                    </svg>
-                    <span id="notification-message" class="font-medium text-sm"></span>
-                </div>
-            </div>
-        `;
-
-        // --- NOTIFICATION HANDLER (Uses Direct Style Manipulation on injected element) ---
+        // --- NOTIFICATION HANDLER (FINAL: Direct Style Manipulation) ---
         function showNotification(message) {
             const container = document.getElementById('copy-notification');
             const messageSpan = document.getElementById('notification-message');
@@ -78,7 +91,7 @@
             }, NOTIFICATION_DURATION);
         }
 
-        // --- CORE COPY FUNCTION (Logic assumes success) ---
+        // --- CORE COPY FUNCTION (Logic assumes success since the copy is known to work) ---
         function copyEmailToClipboard(event, emailAddress) {
             if (event) {
                 event.preventDefault();
@@ -90,18 +103,22 @@
             }
 
             try {
-                // ... (Clipboard access via execCommand is known to be working)
+                // 1. Create temporary element
                 const tempElement = document.createElement('textarea');
                 tempElement.value = emailAddress;
                 tempElement.style.position = 'fixed'; 
                 tempElement.style.top = '0';
                 tempElement.style.left = '-9999px';
                 document.body.appendChild(tempElement);
+                
+                // 2. Select and execute copy command
                 tempElement.select();
                 document.execCommand('copy'); 
+                
+                // 3. Cleanup
                 document.body.removeChild(tempElement);
                 
-                // Guaranteed Notification: If no exception was thrown, the copy succeeded.
+                // 4. Guaranteed Notification: If no exception was thrown, the copy succeeded.
                 showNotification(`Email Address Copied! 📧`);
 
             } catch (err) {
@@ -126,21 +143,14 @@
                 }
 
                 if (emailAddress && emailAddress.includes('@')) {
-                    // 1. Remove the href and change cursor
+                    // Remove the href to stop mailto opening an email client
                     emailLink.removeAttribute('href');
                     emailLink.style.cursor = 'pointer'; 
                     
-                    // 2. Attach the handler 
+                    // Attach the handler using a closure
                     emailLink.addEventListener('click', (e) => copyEmailToClipboard(e, emailAddress));
                     handlerAttached = true;
                     
-                    // 3. INJECT THE NOTIFICATION INTO THE ROOT
-                    const root = document.getElementById('root');
-                    if (root && !document.getElementById('copy-notification')) {
-                        root.insertAdjacentHTML('afterbegin', NOTIFICATION_HTML);
-                    }
-
-                    // 4. Disconnect observer
                     if (observerInstance) {
                         observerInstance.disconnect();
                     }
@@ -151,28 +161,32 @@
             return null;
         }
 
-        // --- INITIALIZATION (Same robust MutationObserver logic) ---
+        // --- INITIALIZATION ---
         window.addEventListener('load', () => {
+            // 1. Check immediately upon load
             if (attachClipboardHandler()) {
                 return; 
             }
 
+            // 2. If not found, start observing the root element for changes
             const root = document.getElementById('root');
             if (!root) {
                 console.error('Copy-to-Clipboard: Root element #root not found.');
                 return;
             }
 
-            // Start observing the root element for changes
+            // Callback function to execute when mutations are observed
             const observerCallback = (mutationsList, observer) => {
                 attachClipboardHandler();
             };
 
+            // Create and store observer instance
             observerInstance = new MutationObserver(observerCallback);
+
+            // Start observing the target node for configured mutations
             const config = { childList: true, subtree: true };
             observerInstance.observe(root, config);
         });
     </script>
   </body>
 </html>
-
