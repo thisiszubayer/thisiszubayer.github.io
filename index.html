@@ -6,6 +6,7 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ahmed Zubayer</title>
+    <!-- Your existing, compiled assets -->
     <script type="module" crossorigin src="./assets/main-Cgw02S6R.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/main-BP-OHASh.css">
   </head>
@@ -14,9 +15,9 @@
 
     <!-- 
         ================================================================================
-        CLIPBOARD INJECTION SCRIPT & UI (MUST BE PLACED JUST BEFORE THE CLOSING </body> TAG)
-        This block adds the Copy-to-Clipboard functionality for the email address 'thisiszubayer@gmail.com'.
-        It includes its own styles and logic to ensure it runs correctly over the React component.
+        CLIPBOARD INJECTION SCRIPT & UI (MutationObserver FIX)
+        This block uses a MutationObserver to actively wait for the React component 
+        to create the email link before attaching the click handler.
         ================================================================================ 
     -->
 
@@ -55,28 +56,24 @@
         </div>
     </div>
 
-    <!-- 2. Pure JavaScript Logic -->
+    <!-- 2. Pure JavaScript Logic (using MutationObserver) -->
     <script>
         // --- CONFIGURATION ---
         const EMAIL_ADDRESS = 'thisiszubayer@gmail.com';
+        const MAILTO_HREF = `mailto:${EMAIL_ADDRESS}`;
         const NOTIFICATION_DURATION = 3000; // 3 seconds
+        let handlerAttached = false;
 
         // --- NOTIFICATION HANDLER ---
         function showNotification(message) {
             const container = document.getElementById('copy-notification');
             const messageSpan = document.getElementById('notification-message');
 
-            if (!container || !messageSpan) {
-                console.error("Copy-to-Clipboard: Notification UI elements not found.");
-                return;
-            }
+            if (!container || !messageSpan) return;
 
             messageSpan.textContent = message;
-            
-            // 1. Show notification
             container.classList.add('notification-active');
 
-            // 2. Hide after duration
             setTimeout(() => {
                 container.classList.remove('notification-active');
             }, NOTIFICATION_DURATION);
@@ -84,27 +81,21 @@
 
         // --- CORE COPY FUNCTION ---
         function copyEmailToClipboard(event) {
-            // Prevent the default action (opening the mailto link)
+            // Prevent the default mailto: action
             if (event) {
                 event.preventDefault();
             }
             
             let success = false;
             try {
-                // Create a temporary, hidden textarea element
                 const tempElement = document.createElement('textarea');
                 tempElement.value = EMAIL_ADDRESS;
-                
-                // Set styles to make it invisible and off-screen
                 tempElement.style.position = 'fixed'; 
                 tempElement.style.top = '0';
                 tempElement.style.left = '-9999px';
                 document.body.appendChild(tempElement);
                 
-                // Select and copy the text
                 tempElement.select();
-                
-                // Use execCommand('copy') for reliable cross-browser/iFrame copying
                 document.execCommand('copy'); 
                 
                 document.body.removeChild(tempElement);
@@ -116,38 +107,72 @@
             if (success) {
                 showNotification(`${EMAIL_ADDRESS} copied! 📋`);
             } else {
-                // Fallback
                 showNotification('Copy failed. Please copy the email manually.');
             }
         }
 
-        // --- INITIALIZATION ---
-        // Wait for the window load event to ensure all React elements are in the DOM
-        window.addEventListener('load', () => {
+        // --- ATTACH HANDLER LOGIC ---
+        function attachClipboardHandler() {
+            if (handlerAttached) return null;
+
             let emailLink = null;
 
-            // Attempt 1: Target the <a> element using its specific href attribute (standard method)
-            emailLink = document.querySelector(`a[href="mailto:${EMAIL_ADDRESS}"]`);
+            // Attempt 1: Check for the exact mailto href
+            emailLink = document.querySelector(`a[href="${MAILTO_HREF}"]`);
 
             if (!emailLink) {
-                // Attempt 2: Search all links for the email address in their content (more robust)
+                // Attempt 2: Search all links for the email address in their text content
                 const allLinks = document.querySelectorAll('a');
                 for (const link of allLinks) {
                     if (link.textContent.includes(EMAIL_ADDRESS)) {
                         emailLink = link;
-                        console.log('Copy-to-Clipboard: Found link by content search.');
                         break;
                     }
                 }
             }
 
             if (emailLink) {
-                // Overwrite the default click behavior with our copy function
-                emailLink.addEventListener('click', copyEmailToClipboard);
-                console.log(`Copy-to-Clipboard: Function attached to email link (${EMAIL_ADDRESS}).`);
-            } else {
-                console.warn('Copy-to-Clipboard: Could not find the target email link element.');
+                // Attach the handler ONLY if not already attached
+                emailLink.addEventListener('click', copyEmailToClipboard, { once: true });
+                handlerAttached = true;
+                console.log(`Copy-to-Clipboard: Handler successfully attached via MutationObserver.`);
+                return emailLink;
             }
+            return null;
+        }
+
+        // --- INITIALIZATION ---
+        window.addEventListener('load', () => {
+            // 1. Check immediately upon load, in case React is fast
+            if (attachClipboardHandler()) {
+                return; // Handler attached, we're done.
+            }
+
+            // 2. If not found, start observing the root element for changes
+            const root = document.getElementById('root');
+            if (!root) {
+                console.error('Copy-to-Clipboard: Root element #root not found.');
+                return;
+            }
+
+            // Callback function to execute when mutations are observed
+            const observerCallback = (mutationsList, observer) => {
+                // We check for the link on every significant change (subtree modification)
+                const foundLink = attachClipboardHandler();
+                
+                if (foundLink) {
+                    // Once the link is found and the handler is attached, stop observing
+                    observer.disconnect();
+                    console.log('Copy-to-Clipboard: MutationObserver disconnected.');
+                }
+            };
+
+            // Create an observer instance linked to the callback function
+            const observer = new MutationObserver(observerCallback);
+
+            // Start observing the target node for configured mutations
+            const config = { childList: true, subtree: true };
+            observer.observe(root, config);
         });
     </script>
   </body>
