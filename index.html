@@ -2,77 +2,48 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- 
-        UPDATED: Added font-weight="900" to make the 'Z' bold in the favicon.
-        The favicon now uses a bold green 'Z'.
-    -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text font-weight=%22900%22 fill=%22%2384cc16%22 y=%22.9em%22 font-size=%2290%22>Z</text></svg>">
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ahmed Zubayer</title>
-    <!-- Your existing, compiled assets -->
     <script type="module" crossorigin src="./assets/main-Cgw02S6R.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/main-BP-OHASh.css">
   </head>
   <body>
-    <!-- The React application lives here -->
     <div id="root"></div>
-
-    <!-- 
-        ================================================================================
-        CLIPBOARD NOTIFICATION UI (V11: TICK PATH ENLARGED)
-        - The path d="M7 12.5 L10.5 15 L17 9.5" is significantly larger and stretches further.
-        ================================================================================ 
-    -->
-
+  
     <div 
         id="copy-notification"
         aria-live="assertive"
         style="
-            /* CRITICAL CSS: PURE STANDARD STYLES FOR ISOLATION */
+            
             position: fixed; 
             bottom: 20px; 
             left: 20px;   
             z-index: 99999; 
             border-radius: 0.5rem; 
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-
-            /* TRANSITION AND INITIAL STATE */
             opacity: 0; 
             visibility: hidden; 
             transform: translateY(20px); 
             transition: all 0.4s ease-out;
         "
     >
-        <!-- PADDING REMAINS PX-4 -->
         <div class="flex items-center gap-3 py-4 px-4 bg-white text-black rounded-lg border border-gray-300">
-            <!-- 
-                ENLARGED SVG TICK: Simple circle and path, but with expanded coordinates. 
-                - Container size is w-8 h-8.
-                - Tick stroke-width="3" for clarity.
-            -->
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-8 h-8">
-                <!-- Green Circle -->
                 <circle cx="12" cy="12" r="11" fill="#10B981" stroke="none"/>
-                <!-- White Tick - Thicker stroke-width="3", LARGER path coordinates -->
                 <path d="M7 12.5 L10.5 15 L17 9.5" stroke="#FFFFFF" stroke-width="3" fill="none"/>
             </svg>
-
-            <!-- Text size is text-lg -->
             <span id="notification-message" class="font-medium text-lg"></span>
         </div>
     </div>
-
-    <!-- 2. Pure JavaScript Logic -->
     <script>
-        // --- CONFIGURATION ---
-        const NOTIFICATION_DURATION = 5000; // Display time: 5000ms
+        const NOTIFICATION_DURATION = 5000; 
         let handlerAttached = false;
         let observerInstance = null; 
         const TRANSITION_DURATION_MS = 400; 
         const FALLBACK_EMAIL = "thisiszubayer@gmail.com"; 
 
-        // --- NOTIFICATION HANDLER ---
         function showNotification(message) {
             const container = document.getElementById('copy-notification');
             const messageSpan = document.getElementById('notification-message');
@@ -81,20 +52,16 @@
 
             messageSpan.textContent = message;
 
-            // 1. Force visible state: Slides UP to Y(0)
             requestAnimationFrame(() => {
                 container.style.opacity = '1';
                 container.style.visibility = 'visible';
                 container.style.transform = 'translateY(0)';
             });
 
-            // 2. Set timeout to hide it
             setTimeout(() => {
-                // Hides: Slides DOWN to Y(20px)
                 container.style.opacity = '0';
                 container.style.transform = 'translateY(20px)'; 
-                
-                // 3. Delay the visibility change until the opacity transition is finished 
+
                 setTimeout(() => {
                      container.style.visibility = 'hidden';
                 }, TRANSITION_DURATION_MS); 
@@ -102,7 +69,6 @@
             }, NOTIFICATION_DURATION);
         }
 
-        // --- CORE COPY FUNCTION ---
         function copyEmailToClipboard(event, emailAddress) {
             if (event) {
                 event.preventDefault();
@@ -114,7 +80,6 @@
             }
 
             try {
-                // Clipboard access via execCommand (works in this environment)
                 const tempElement = document.createElement('textarea');
                 tempElement.value = emailAddress;
                 tempElement.style.position = 'fixed'; 
@@ -124,18 +89,15 @@
                 tempElement.select();
                 document.execCommand('copy'); 
                 document.body.removeChild(tempElement);
-                
-                // Success message
+
                 showNotification(`Email address copied successfully!`);
 
             } catch (err) {
-                // Error message
                 console.error('Copy to clipboard failed:', err);
                 showNotification(`Copy failed. Email: ${FALLBACK_EMAIL}`);
             }
         }
 
-        // --- ATTACH HANDLER LOGIC ---
         function attachClipboardHandler() {
             if (handlerAttached) return null;
 
@@ -166,7 +128,6 @@
             return null;
         }
 
-        // --- INITIALIZATION ---
         window.addEventListener('load', () => {
             if (attachClipboardHandler()) {
                 return; 
