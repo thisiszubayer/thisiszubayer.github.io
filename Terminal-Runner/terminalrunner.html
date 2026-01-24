@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Runner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #000; color: #fff; overflow: hidden; font-family: 'Courier New', Courier, monospace; margin: 0; }
+        #ui-header { width: 1000px; display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
+        #main-layout { display: flex; align-items: center; gap: 40px; }
+        #game-wrapper { position: relative; width: 1000px; height: 500px; }
+        canvas { display: block; border: 3px solid #22c55e; box-shadow: 0 0 30px rgba(34, 197, 94, 0.2); background: #010801; }
+        .protocol-box { width: 280px; border: 2px solid #0891b2; background: #020d0f; padding: 20px; border-radius: 8px; box-shadow: 0 0 15px rgba(8, 145, 178, 0.2); }
+        .protocol-title { color: #22d3ee; font-weight: 900; font-size: 18px; border-bottom: 2px solid #0891b2; margin-bottom: 12px; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .protocol-text { color: #67e8f9; font-size: 14px; line-height: 1.6; font-weight: bold; }
+        .stat-group { display: flex; flex-direction: column; }
+        .stat-label { color: #15803d; text-transform: uppercase; font-size: 14px; letter-spacing: 2px; font-weight: bold; line-height: 1; }
+        .stat-value { color: #22c55e; font-size: 32px; font-weight: bold; }
+        .credit-value { color: #4ade80; font-size: 56px; font-weight: bold; line-height: 1; }
+        .ui-panel { width: 1000px; margin-top: 25px; background: #020a02; border: 2px solid #15803d; border-radius: 8px; padding: 20px; }
+        .control-key { color: #4ade80; font-size: 24px; font-weight: 900; }
+        .control-desc { color: #15803d; font-size: 14px; text-transform: uppercase; font-weight: bold; margin-left: 10px; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center h-screen">
+
+    <audio id="bgMusic" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="ui-header">
+        <div class="flex gap-12">
+            <div class="stat-group">
+                <div class="stat-label">SYSTEM VELOCITY</div>
+                <div id="speed-text" class="stat-value">1.00x</div>
+            </div>
+            <div class="stat-group">
+                <div class="stat-label">YIELD MULTIPLIER</div>
+                <div id="mult-text" class="stat-value">1.00x</div>
+            </div>
+        </div>
+        <div class="stat-group text-right">
+            <div class="stat-label">TOTAL CREDITS</div>
+            <div id="score-text" class="credit-value">0</div>
+        </div>
+    </div>
+
+    <div id="main-layout">
+        <div class="protocol-box">
+            <div class="protocol-title">Brake Protocol</div>
+            <div class="protocol-text">
+                Holding <span class="text-white">[LEFT]</span> reduces Velocity for emergency evasion.
+                <br><br>
+                <span class="text-red-400">PENALTY:</span> Multiplier is reset to match current speed. Recovery is throttled.
+            </div>
+        </div>
+
+        <div id="game-wrapper">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+
+        <div class="protocol-box">
+            <div class="protocol-title">Boost Protocol</div>
+            <div class="protocol-text">
+                Holding <span class="text-white">[RIGHT]</span> triggers System Overclock.
+                <br><br>
+                <span class="text-yellow-400">GAIN:</span> Accelerates both Velocity and Multiplier. High risk/High credit yield.
+            </div>
+        </div>
+    </div>
+
+    <div class="ui-panel">
+        <div class="flex justify-around items-center">
+            <div class="flex items-center">
+                <span class="control-key">[↑/↓]</span>
+                <span class="control-desc">Move</span>
+            </div>
+            <div class="h-10 w-[1px] bg-green-900/30"></div>
+            <div class="flex items-center">
+                <span class="control-key">[←]</span>
+                <span class="control-desc">Brake</span>
+            </div>
+            <div class="h-10 w-[1px] bg-green-900/30"></div>
+            <div class="flex items-center">
+                <span class="control-key">[→]</span>
+                <span class="control-desc">Boost</span>
+            </div>
+            <div class="h-10 w-[1px] bg-green-900/30"></div>
+            <div class="flex items-center">
+                <span class="control-key">[SPACE]</span>
+                <span class="control-desc">Confirm/Start</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const bgMusic = document.getElementById('bgMusic');
+        canvas.width = 1000;
+        canvas.height = 500;
+
+        let gameActive = false; 
+        let shipY = 250;
+        let score = 0;
+        let obstacles = [];
+        let frame = 0;
+        
+        let targetSpeed = 5;      
+        let visualSpeed = 5;      
+        let multiplierValue = 1;  
+        const minSpeed = 5;       
+
+        const ship = { x: 100, size: 28 };
+        const keys = {};
+
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (!gameActive && e.code === 'Space') restartGame();
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        function restartGame() {
+            gameActive = true;
+            shipY = 250;
+            score = 0;
+            obstacles = [];
+            frame = 0;
+            targetSpeed = 5;
+            visualSpeed = 5;
+            multiplierValue = 1;
+
+            // Attempt to play music with error handling
+            bgMusic.play().catch(error => console.log("Music play blocked:", error));
+            
+            draw();
+        }
+
+        function spawnObstacle() {
+            if (obstacles.length > 0) {
+                const lastObs = obstacles[obstacles.length - 1];
+                const minGap = 450 + (targetSpeed * 10); 
+                if (canvas.width - lastObs.x < minGap) return;
+            }
+            const height = 100 + Math.random() * 200;
+            const y = Math.random() > 0.5 ? 0 : canvas.height - height;
+            obstacles.push({ x: canvas.width, y, w: 50, h: height });
+        }
+
+        function update() {
+            if (!gameActive) {
+                bgMusic.pause(); // Stop music when dead
+                return;
+            }
+            frame++;
+            
+            targetSpeed += 0.0006;
+
+            if (keys['ArrowRight']) {
+                targetSpeed += 0.004;
+                multiplierValue += 0.002;
+            }
+
+            if (keys['ArrowLeft']) {
+                if (visualSpeed > minSpeed) visualSpeed -= 0.25;
+                multiplierValue = visualSpeed / 5;
+            } else {
+                visualSpeed = targetSpeed;
+                multiplierValue += 0.00025;
+                if (multiplierValue > targetSpeed / 5) multiplierValue = targetSpeed / 5;
+            }
+
+            document.getElementById('speed-text').innerText = (visualSpeed/5).toFixed(2) + "x";
+            document.getElementById('mult-text').innerText = multiplierValue.toFixed(2) + "x";
+            
+            score += (0.8 * multiplierValue);
+            document.getElementById('score-text').innerText = Math.floor(score).toLocaleString();
+
+            if (frame % 60 === 0) spawnObstacle();
+
+            if (keys['ArrowUp'] && shipY > 0) shipY -= 8;
+            if (keys['ArrowDown'] && shipY < canvas.height - ship.size) shipY += 8;
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.x -= visualSpeed;
+                if (obs.x + obs.w < 0) { obstacles.splice(i, 1); continue; }
+                if (ship.x < obs.x + obs.w && ship.x + ship.size > obs.x &&
+                    shipY < obs.y + obs.h && shipY + ship.size > obs.y) {
+                    gameActive = false;
+                }
+            }
+        }
+
+        function draw() {
+            if (!gameActive) {
+                ctx.fillStyle = "rgba(0,0,0,0.92)";
+                ctx.fillRect(0,0,canvas.width, canvas.height);
+                
+                if (frame === 0) { 
+                    ctx.fillStyle = "#22c55e";
+                    ctx.textAlign = "center";
+                    ctx.font = "bold 50px Courier New";
+                    ctx.fillText("TERMINAL READY", canvas.width/2, canvas.height/2 - 20);
+                    ctx.font = "20px Courier New";
+                    ctx.fillText("PRESS [SPACE] TO INITIATE DATA HARVEST", canvas.width/2, canvas.height/2 + 50);
+                } else { 
+                    ctx.fillStyle = "#ff0000";
+                    ctx.textAlign = "center";
+                    ctx.font = "900 110px Courier New";
+                    ctx.fillText("CRASHED!", canvas.width/2, canvas.height/2);
+                    ctx.font = "bold 28px Courier New";
+                    ctx.fillText("SYSTEM TERMINATED", canvas.width/2, canvas.height/2 + 60);
+                    ctx.fillStyle = "#ff4444";
+                    ctx.font = "bold 26px Courier New";
+                    ctx.fillText("CREDITS SECURED: " + Math.floor(score), canvas.width/2, canvas.height/2 + 115);
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "bold 20px Courier New";
+                    ctx.fillText("PRESS [SPACE] TO REBOOT CORE", canvas.width/2, canvas.height/2 + 170);
+                }
+                return;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#061a06';
+            ctx.lineWidth = 1;
+            for(let i=0; i<canvas.width; i+=50) {
+                ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i, canvas.height); ctx.stroke();
+            }
+            for(let i=0; i<canvas.height; i+=50) {
+                ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+            ctx.fillStyle = '#0a250a';
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2;
+            obstacles.forEach(obs => {
+                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+            });
+            ctx.fillStyle = '#22c55e';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#22c55e';
+            ctx.fillRect(ship.x, shipY, ship.size, ship.size);
+            ctx.shadowBlur = 0;
+            update();
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</body>
+</html>
